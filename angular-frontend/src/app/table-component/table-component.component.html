@@ -1,0 +1,33 @@
+<div class="search-field-container">
+  <mat-form-field>
+    <mat-label>Search</mat-label>
+    <input matInput (input)="handleSearchInput($event)" placeholder="Search...">
+  </mat-form-field>
+</div>
+
+<div class="table-container">
+  <mat-table
+    [dataSource]="dataSource"
+    matSort
+    [matSortActive]="(sort$ | async)?.active ?? ''"
+    [matSortDirection]="(sort$ | async)?.direction ?? ''"
+    (matSortChange)="handleSortData($event)"
+  >
+    <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
+      <mat-header-cell *matHeaderCellDef mat-sort-header> {{ column }} </mat-header-cell>
+      <mat-cell *matCellDef="let element"> {{ element[column] }} </mat-cell>
+    </ng-container>
+
+    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+    <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+  </mat-table>
+
+  <mat-paginator
+    #paginator
+    (page)="handlePageEvent($event)"
+    [length]="(nrOfObjectsMatchingSearch$ | async)"
+    [pageSize]="(page$ | async)?.pageSize"
+    [pageIndex]="(page$ | async)?.pageIndex"
+    [pageSizeOptions]="[5, 10, 20]"
+  ></mat-paginator>
+</div>

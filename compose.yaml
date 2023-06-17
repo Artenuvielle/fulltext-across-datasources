@@ -1,0 +1,88 @@
+services:
+  frontend:
+    build:
+      context: ./angular-frontend
+    ports:
+      - '4200:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - 'BACKEND_URL=http://localhost:8080'
+  backend:
+    build:
+      context: ./spring-boot-backend
+    ports:
+      - '8080:8080'
+    depends_on:
+      postgres-patients:
+        condition: service_healthy
+      postgres-addresses:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - 'PATIENTS_DATASOURCE_URL=jdbc:postgresql://postgres-patients:5432/patients'
+      - 'PATIENTS_DATASOURCE_USERNAME=postgres'
+      - 'PATIENTS_DATASOURCE_PASSWORD=postgres'
+      - 'ADDRESSES_DATASOURCE_URL=jdbc:postgresql://postgres-addresses:5432/addresses'
+      - 'ADDRESSES_DATASOURCE_USERNAME=postgres'
+      - 'ADDRESSES_DATASOURCE_PASSWORD=postgres'
+      - 'ELASTICSEARCH_HOST=elasticsearch'
+      - 'ELASTICSEARCH_PORT=9200'
+      - 'CORS_ORIGIN=http://localhost:4200/'
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --silent --fail localhost:8080/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  elasticsearch:
+    image: 'docker.elastic.co/elasticsearch/elasticsearch:8.7.1'
+    environment:
+      - 'ELASTIC_PASSWORD=secret'
+      - 'discovery.type=single-node'
+      - 'xpack.security.enabled=false'
+    ports:
+      - '9200:9200'
+      - '9300:9300'
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  postgres-patients:
+    image: 'postgres:latest'
+    environment:
+      - 'POSTGRES_DB=patients'
+      - 'POSTGRES_USER=postgres'
+      - 'POSTGRES_PASSWORD=postgres'
+    ports:
+      - '5432:5432'
+    volumes:
+      - 'patients-db:/var/lib/postgresql/data'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  postgres-addresses:
+    image: 'postgres:latest'
+    environment:
+      - 'POSTGRES_DB=addresses'
+      - 'POSTGRES_USER=postgres'
+      - 'POSTGRES_PASSWORD=postgres'
+    ports:
+      - '5433:5432'
+    volumes:
+      - 'addresses-db:/var/lib/postgresql/data'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  patients-db:
+    driver: local
+  addresses-db:
+    driver: local
